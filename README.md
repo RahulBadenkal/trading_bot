@@ -10,4 +10,10 @@ Reference links
 - https://www.quora.com/Does-Erlang-use-all-the-existing-cores-automatically
 - https://github.com/tiangolo/fastapi/issues/520#issuecomment-667428023
 - https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://anecdotes.dev/fastapi-scale-with-non-asyncio-requests-handling-e10b181eaa02%23:~:text%3DWhen%2520FastAPI%2520is%2520used%2520asynchronously,allowing%2520context%2520switches%2520between%2520them.%26text%3DThis%2520way%252C%2520FastAPI%2520appears%2520to,this%2520is%2520not%2520entirely%2520accurate.&ved=2ahUKEwjwqKbDz7mFAxWW6jgGHSoHBfoQFnoECBIQBQ&usg=AOvVaw1F_J3lnLxWNlBP9F-jZms5
-- 
+
+
+How to start the app
+- copy and rename .env_common_sample -> .env_common
+- copy and rename .env_alert_handler_sample -> .env_alert_handler
+- Fill in the config in both of the .env files as per your environment
+- TODO: add run command 
