@@ -1,0 +1,1 @@
+gunicorn alert_handler.server:app --workers 1 --worker-class uvicorn.workers.UvicornWorker
