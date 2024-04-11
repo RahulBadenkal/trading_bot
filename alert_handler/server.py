@@ -63,7 +63,6 @@ async def catch_exceptions_middleware(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception as e:
-        # Log the error, send it to an error tracking system, etc.
         stack_trace = get_stack_trace(e)
         logging.error(stack_trace)
         error_response = {
@@ -85,6 +84,7 @@ async def execute_trade(alert: AlertRequest):
 
         logging.info(response.json())
     except Exception as e:
+        # exceptions don't automatically get logged, so need to do that manually
         logging.error(get_stack_trace(e))
 
 
@@ -116,6 +116,7 @@ async def save_to_db():
         logging.info(f"saved: {len(alerts)} to db")
 
     except Exception as e:
+        # exceptions don't automatically get logged, so need to do that manually
         logging.error(get_stack_trace(e))
 
 
