@@ -19,6 +19,3 @@ class Config(BaseConfig):
 
         Config.db_max_batch_size = int(os.getenv("DB_MAX_BATCH_SIZE"))
 
-
-
-
