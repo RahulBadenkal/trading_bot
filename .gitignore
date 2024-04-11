@@ -1,0 +1,8 @@
+#/connor-shin-68a1599a6f40.json
+#/**/.env1
+/logs/
+
+.env_common
+.env_alert_handler
+
+venv

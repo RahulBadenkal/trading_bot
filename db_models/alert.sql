@@ -1,0 +1,7 @@
+CREATE TABLE alert (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR NOT NULL,
+    job VARCHAR NOT NULL,
+    created_on TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_on TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
