@@ -1,8 +1,9 @@
 import json
 import logging
 import os
+import uuid
 from datetime import datetime
-from typing import Any, List
+from typing import Any, List, Literal, Union, Dict
 
 import httpx
 from fastapi_utils.tasks import repeat_every
@@ -13,7 +14,7 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import BackgroundTasks, FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 from alert_handler.config import Config
 from common.httpx_utils import httpx_raise_for_status
@@ -34,8 +35,8 @@ exchange_client = httpx.AsyncClient(base_url="https://reqres.in")  # This ensure
 # Types #
 #########
 class AlertRequest(BaseModel):
-    name: str
-    job: str
+    coin: str
+    action: Literal["open", "close"]
 
 
 ############
@@ -76,10 +77,9 @@ async def catch_exceptions_middleware(request: Request, call_next):
 ###########
 # Helpers #
 ###########
-async def execute_trade(alert: AlertRequest):
+async def execute_trade(alert: Any):
     try:
-        data = alert.dict()
-        response = await exchange_client.post("/api/users", json=data, timeout=5)
+        response = await exchange_client.post("/api/users", json={"name": "heyo", "job": "Detective"}, timeout=5)
         httpx_raise_for_status(response)
 
         logging.info(response.json())
@@ -92,11 +92,23 @@ async def save_to_db():
     try:
         logging.info(f"save to db callback. alert queue size: {alert_queue.qsize()}")
 
-        alerts: List[AlertRequest] = []
+        alerts: List[Any] = []
+        trades: List[Any] = []
         for _ in range(Config.db_max_batch_size):
             if not alert_queue.empty():
-                alerts.append(alert_queue.get())
+                new_alert = alert_queue.get()
                 alert_queue.task_done()
+
+                new_alert["id"] = uuid.uuid4()
+                alerts.append(new_alert)
+
+                trades.append({
+                    "id": uuid.uuid4(),
+                    "alert_id": new_alert["id"],
+                    "coin": new_alert["coin"],
+                    "status": new_alert["action"],
+                    "fired_on": new_alert['fired_on'],
+                })
             else:
                 break
         if len(alerts) == 0:
@@ -104,15 +116,28 @@ async def save_to_db():
 
         # Save to db
         async with Config.pool.acquire() as db_connection:
+            # Save alerts table
             await db_connection.executemany('''
-                INSERT INTO alert (name, job, created_on, updated_on)
-                VALUES ($1, $2, NOW(), NOW())
+                INSERT INTO alert (id, coin, action, fired_on, created_on, updated_on)
+                VALUES ($1, $2, $3, $4, NOW(), NOW())
             ''', [
                 (
-                    row.name,
-                    row.job,
+                    row['id'],
+                    row['coin'],
+                    row['action'],
+                    row['fired_on'],
                 ) for row in alerts
             ])
+
+            # Save trades table
+            trades = [
+                (row['id'], row['alert_id'], row['coin'], row['status'], row['fired_on'])
+                for row in trades
+            ]
+            await db_connection.execute(
+                "CALL upsert_trade($1::trade_type[])",
+                (trades,)
+            )
         logging.info(f"saved: {len(alerts)} to db")
 
     except Exception as e:
@@ -130,6 +155,8 @@ async def health():
 
 @app.post("/alert")
 async def load(alert: AlertRequest, background_tasks: BackgroundTasks):
+    alert = alert.dict()
+    alert['fired_on'] = datetime.now()  # Need a field that indicated which is the latest alert
     alert_queue.put(alert)
     background_tasks.add_task(execute_trade, alert=alert)
 
