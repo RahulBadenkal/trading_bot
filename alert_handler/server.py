@@ -116,7 +116,7 @@ async def save_to_db():
 
         # Save to db
         async with Config.pool.acquire() as db_connection:
-            # Save alerts table
+            # Save alerts
             await db_connection.executemany('''
                 INSERT INTO alert (id, coin, action, fired_on, created_on, updated_on)
                 VALUES ($1, $2, $3, $4, NOW(), NOW())
@@ -129,7 +129,7 @@ async def save_to_db():
                 ) for row in alerts
             ])
 
-            # Save trades table
+            # Save trades
             trades = [
                 (row['id'], row['alert_id'], row['coin'], row['status'], row['fired_on'])
                 for row in trades
@@ -138,7 +138,7 @@ async def save_to_db():
                 "CALL upsert_trade($1::trade_type[])",
                 (trades,)
             )
-        logging.info(f"saved: {len(alerts)} to db")
+        logging.info(f"saved: {len(alerts)} alerts to db")
 
     except Exception as e:
         # exceptions don't automatically get logged, so need to do that manually
